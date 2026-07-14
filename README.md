@@ -22,7 +22,7 @@ It then checks four of the paper's claims:
 
 1. **Loss** reproduces: all three train stably, AttnRes ahead (1.499 vs. DCA 1.522 vs. baseline 1.554 nats/byte), though at this scale "comparable loss, trains stably" is the honest reading.
 2. **Output magnitudes across depth** reproduces: the baseline's grow with depth (~4 to ~17), AttnRes stays bounded. The cleanest result here, since it follows from the update rule itself.
-3. **Gradient uniformity across depth** does **not** reproduce: AttnRes comes out the *least* uniform of the three, not the most. The notebook reports this as an honest negative and explains why depth 6 (vs. the paper's ~24) and Full AttnRes (vs. the paper's Block AttnRes) make the comparison unfair to begin with.
+3. **Gradient uniformity across depth** does **not** reproduce: AttnRes comes out the *least* uniform of the three, not the most. The notebook reports this as an honest negative and explains why depth 6 (vs. the paper's 27) and Full AttnRes (vs. the paper's Block AttnRes) make the comparison unfair to begin with.
 4. **Learned depth-attention patterns** reproduces: locality and embedding persistence both show up in the weight heatmap.
 
 The notebook is self-contained. enwik8 (~35 MB) downloads itself into `data/` on first run.
