@@ -1,60 +1,37 @@
 # Attention Residuals Analysis
 
-A from-scratch implementation and gradient-flow analysis of **Attention Residuals (AttnRes)** on a GPT-2-style transformer, with a baseline comparison against **DeepCrossAttention (DCA)**.
-
-This repository is the deliverable for the grade bonus of the TUM seminar *Large 950879307 (S26)* (advisor: Tristan Till). The agreed scope is documented in [`proposal.md`](./proposal.md).
+A from-scratch implementation and gradient-flow analysis of **Attention Residuals (AttnRes)** on a small decoder-only transformer, compared against **DeepCrossAttention (DCA)** and standard PreNorm residuals.
 
 ## Background
 
 Standard residual connections in modern LLMs accumulate every preceding layer's output with fixed unit weights. The Kimi Team's *Attention Residuals* report argues this uniform aggregation causes uncontrolled hidden-state growth with depth and progressively dilutes each layer's contribution. AttnRes replaces the fixed accumulation with a softmax attention over preceding layer outputs, giving each layer learned, input-dependent weights over earlier representations.
 
-DeepCrossAttention (Heddes et al., ICML 2025) attacks the same dilution problem from a slightly different angle, with learnable input-dependent weights and depth-wise cross-attention. It serves as the baseline for this project.
+DeepCrossAttention (Heddes et al., ICML 2025) attacks the same dilution problem from a slightly different angle, with learnable input-dependent weights and depth-wise cross-attention. It serves as the baseline here.
 
-## Scope
+## The notebook
 
-The advisor-confirmed minimum scope is:
+[`notebook.ipynb`](./notebook.ipynb) trains three ~19M-parameter, byte-level models on enwik8, identical in backbone, seed and batch order, differing only in how each layer's input is formed from the preceding layer outputs:
 
-1. From-scratch implementation of Attention Residuals on top of a GPT-2-style transformer.
-2. Gradient-flow analysis across layers to verify numerical stability.
-3. Baseline comparison against at least one alternative — DeepCrossAttention, importable as external code.
-4. Visualization of the AttnRes architecture/process.
+| Variant | Residual mechanism |
+|---|---|
+| **Baseline** | standard PreNorm residuals (fixed unit weights) |
+| **DCA** | GRN-gated access to past layer outputs (Heddes et al., ICML 2025) |
+| **AttnRes** | softmax attention over all past layer outputs (Kimi Team 2026), implemented from scratch |
 
-Anything beyond this (Block AttnRes for memory efficiency, MoE integration, scaling-law experiments, mHC from DeepSeek, ResNet-style residuals) is optional extension territory.
+It then checks four of the paper's claims:
 
-## Deliverables
+1. **Loss** reproduces: all three train stably, AttnRes ahead (1.499 vs. DCA 1.522 vs. baseline 1.554 nats/byte), though at this scale "comparable loss, trains stably" is the honest reading.
+2. **Output magnitudes across depth** reproduces: the baseline's grow with depth (~4 to ~17), AttnRes stays bounded. The cleanest result here, since it follows from the update rule itself.
+3. **Gradient uniformity across depth** does **not** reproduce: AttnRes comes out the *least* uniform of the three, not the most. The notebook reports this as an honest negative and explains why depth 6 (vs. the paper's ~24) and Full AttnRes (vs. the paper's Block AttnRes) make the comparison unfair to begin with.
+4. **Learned depth-attention patterns** reproduces: locality and embedding persistence both show up in the weight heatmap.
 
-Per the seminar guidelines:
+The notebook is self-contained. enwik8 (~35 MB) downloads itself into `data/` on first run.
 
-- **3–5 slides** on the AttnRes paper, structured as Intuition / Method / Discussion. Slides must call out at least one predecessor (standard residual connections / PreNorm) and any unresolved weaknesses or follow-up work.
-- **A notebook** that reproduces a partial/toy result from the paper, includes one architecture/process diagram, and runs end-to-end without errors.
+## Credits
 
-## Repository structure
-
-```
-attention-residuals-analysis/
-├── README.md                        # This file
-├── AGENTS.md                        # Guidance for AI assistants working in this repo
-├── proposal.md                      # The proposal sent to the advisor
-└── related_works/
-    ├── Attention_Residuals.pdf      # Kimi Team — primary paper
-    └── DeepCrossAttention.pdf       # Heddes et al. — baseline
-```
-
-The notebook and slides will be added as the work progresses.
-
-## Getting started
-
-The intended environment is Python 3.11+ with PyTorch. A typical setup:
-
-```bash
-python -m venv .venv
-source .venv/bin/activate
-pip install torch numpy matplotlib jupyter
-```
-
-Once the notebook exists, launch it with `jupyter lab` from the repo root.
+The shared GPT backbone, the DCA baseline and the training loop are adapted from Phil Wang's (lucidrains) [`deep-cross-attention`](https://github.com/lucidrains/deep-cross-attention), MIT-licensed (Copyright © 2025 Phil Wang); the enwik8 archive is fetched from the same repository. The AttnRes implementation is our own.
 
 ## References
 
-- Kimi Team. *Attention Residuals* (Technical Report). https://github.com/MoonshotAI/Attention-Residuals
-- Heddes, M., Javanmard, A., Axiotis, K., Fu, G., Bateni, M. H., Mirrokni, V. *DeepCrossAttention: Supercharging Transformer Residual Connections.* ICML 2025. arXiv:2502.06785.
+- Kimi Team (2026). *Attention Residuals* (Technical Report). https://github.com/MoonshotAI/Attention-Residuals
+- Heddes, M., Javanmard, A., Axiotis, K., Fu, G., Bateni, M. H., Mirrokni, V. (2025). *DeepCrossAttention: Supercharging Transformer Residual Connections.* ICML 2025. arXiv:2502.06785.

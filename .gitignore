@@ -511,3 +511,6 @@ poetry.toml
 
 # LSP config files
 pyrightconfig.json
+
+# enwik8 corpus, downloaded by the notebook on first run
+data/
