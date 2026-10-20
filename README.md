@@ -23,7 +23,7 @@ The Kimi Team argue that this fixed accumulation has a cost. Because the stream 
 AttnRes replaces the sum with softmax attention along the depth axis. Write $v_0$ for the token embedding and $v_i$ for the output of sublayer $i$. Each sublayer $l$ forms its input as
 
 ```math
-k_i = \mathrm{RMSNorm}(v_i) \qquad \alpha_{i \to l} = \underset{i < l}{\mathrm{softmax}}\;(w_l^\top k_i) \qquad h_l = \sum_{i<l} \alpha_{i \to l}\, v_i
+k_i = \mathrm{RMSNorm}(v_i) \qquad \alpha_{i \to l} = \underset{i \lt l}{\mathrm{softmax}}\;(w_l^\top k_i) \qquad h_l = \sum_{i \lt l} \alpha_{i \to l}\, v_i
 ```
 
 Three details matter:
