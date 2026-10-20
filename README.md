@@ -2,13 +2,15 @@
 
 *A from-scratch implementation of Attention Residuals (Kimi Team 2026), trained against DeepCrossAttention (Heddes et al., ICML 2025) and standard PreNorm residuals on enwik8.*
 
-**TL;DR.** We implemented Full Attention Residuals (AttnRes) on a ~19M-parameter byte-level GPT and trained it alongside two baselines with identical backbone, seed and batch order. Three of the paper's four claims reproduce at this scale: AttnRes trains stably with slightly lower loss, keeps sublayer output magnitudes bounded across depth, and learns the depth-attention patterns the paper reports. The fourth does not: AttnRes produces the *least* uniform gradient distribution across depth of the three models, not the most. Everything is in one self-contained notebook, [`notebook.ipynb`](./notebook.ipynb).
+**TL;DR.** This is a from-scratch implementation of Full Attention Residuals (AttnRes) on a ~19M-parameter byte-level GPT, trained alongside two baselines with identical backbone, seed and batch order. Three of the paper's four claims reproduce at this scale: AttnRes trains stably with slightly lower loss, keeps sublayer output magnitudes bounded across depth, and learns the depth-attention patterns the paper reports. The fourth does not: AttnRes produces the *least* uniform gradient distribution across depth of the three models, not the most. Everything is in one self-contained notebook, [`notebook.ipynb`](./notebook.ipynb).
 
 ## Motivation
 
 A standard PreNorm transformer forms each layer's input by adding every earlier layer's output onto one running stream, all with a fixed weight of 1:
 
-$$h \leftarrow h + f(h)$$
+```math
+h \leftarrow h + f(h)
+```
 
 The Kimi Team argue that this fixed accumulation has a cost. Because the stream is never rescaled, its magnitude grows with depth, and a deep layer has to emit an ever-larger output to change it noticeably. They call this *PreNorm dilution*.
 
@@ -20,7 +22,9 @@ The Kimi Team argue that this fixed accumulation has a cost. Because the stream 
 
 AttnRes replaces the sum with softmax attention along the depth axis. Write $v_0$ for the token embedding and $v_i$ for the output of sublayer $i$. Each sublayer $l$ forms its input as
 
-$$k_i = \mathrm{RMSNorm}(v_i) \qquad \alpha_{i \to l} = \underset{i < l}{\mathrm{softmax}}\;(w_l^\top k_i) \qquad h_l = \sum_{i<l} \alpha_{i \to l}\, v_i$$
+```math
+k_i = \mathrm{RMSNorm}(v_i) \qquad \alpha_{i \to l} = \underset{i < l}{\mathrm{softmax}}\;(w_l^\top k_i) \qquad h_l = \sum_{i<l} \alpha_{i \to l}\, v_i
+```
 
 Three details matter:
 
@@ -30,7 +34,7 @@ Three details matter:
 
 Since the weights sum to 1, every layer input is a convex combination of what came before. The unbounded accumulation is gone, and so is the identity path. That second fact turns out to matter for the gradient result below.
 
-We implement **Full** AttnRes (attention over every sublayer) rather than the paper's **Block** AttnRes. Block AttnRes exists to save memory and pipeline communication at large scale, where layer outputs must be explicitly kept and shipped between devices. At our scale those outputs are already held for backpropagation, so Full AttnRes costs nothing extra and measures the mechanism without the block approximation.
+The implementation here is **Full** AttnRes (attention over every sublayer), not the paper's **Block** AttnRes. Block AttnRes exists to save memory and pipeline communication at large scale, where layer outputs must be explicitly kept and shipped between devices. At this scale those outputs are already held for backpropagation, so Full AttnRes costs nothing extra and measures the mechanism without the block approximation.
 
 ## Setup
 
@@ -70,11 +74,11 @@ The baseline's sublayer outputs grow from ~4 to ~17 across the 12 sublayers, wit
 
 ![Gradient arriving at each sublayer output](assets/eval3b-grad-through-depth.png)
 
-The paper's Fig. 5c shows the baseline concentrating gradient in its earliest layers and AttnRes spreading it evenly. We measured the gradient arriving at each sublayer's output, $\partial L / \partial \text{out}$, via backward hooks.
+The paper's Fig. 5c shows the baseline concentrating gradient in its earliest layers and AttnRes spreading it evenly. The plot shows the gradient arriving at each sublayer's output, $\partial L / \partial \text{out}$, measured via backward hooks.
 
 The baseline does show the paper's tilt, mildly: largest at the bottom and falling ~2.9× toward the top. AttnRes does not flatten this. It inverts it: smallest at the early sublayers, largest at the deepest, with a ~6.3× spread, the widest of the three. DCA lands in between at ~2.2×.
 
-Our explanation is depth. AttnRes has no identity path, so the gradient reaches an early layer only through softmax weights that are split across a growing number of sources. Each step backward attenuates the gradient instead of passing it through. At depth 6 this outweighs any equalizing effect. The paper measures at depth 27 and with *Block* AttnRes, which resets accumulation at block boundaries, so the two setups are not directly comparable. The notebook also reports per-block parameter-gradient norms (flat for the baseline, rising ~5× for AttnRes) and explains why the two probes disagree for the baseline.
+The most likely explanation is depth. AttnRes has no identity path, so the gradient reaches an early layer only through softmax weights that are split across a growing number of sources. Each step backward attenuates the gradient instead of passing it through. At depth 6 this outweighs any equalizing effect. The paper measures at depth 27 and with *Block* AttnRes, which resets accumulation at block boundaries, so the two setups are not directly comparable. The notebook also reports per-block parameter-gradient norms (flat for the baseline, rising ~5× for AttnRes) and explains why the two probes disagree for the baseline.
 
 ### 4. Learned depth attention: matches the paper's Fig. 8
 
@@ -103,7 +107,7 @@ The notebook downloads enwik8 (~35 MB) into `data/` on first run. Set `QUICK = T
 
 ## Credits
 
-The shared GPT backbone, the DCA baseline and the training loop are adapted from Phil Wang's (lucidrains) [`deep-cross-attention`](https://github.com/lucidrains/deep-cross-attention), MIT-licensed (Copyright © 2025 Phil Wang); the enwik8 archive is fetched from the same repository. The AttnRes implementation is our own. Architecture figure from Kimi Team 2026.
+The shared GPT backbone, the DCA baseline and the training loop are adapted from Phil Wang's (lucidrains) [`deep-cross-attention`](https://github.com/lucidrains/deep-cross-attention), MIT-licensed (Copyright © 2025 Phil Wang); the enwik8 archive is fetched from the same repository. The AttnRes implementation is my own. Architecture figure from Kimi Team 2026.
 
 ## References
 
