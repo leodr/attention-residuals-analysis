@@ -3,6 +3,8 @@ name = "attention-residuals-analysis"
 version = "0.1.0"
 description = "Attention Residuals (Kimi Team 2026) from scratch, compared against DeepCrossAttention and standard residuals"
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.14"
 dependencies = [
     "einops>=0.8.2",

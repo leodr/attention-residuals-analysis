@@ -109,6 +109,10 @@ The notebook downloads enwik8 (~35 MB) into `data/` on first run. Set `QUICK = T
 
 The shared GPT backbone, the DCA baseline and the training loop are adapted from Phil Wang's (lucidrains) [`deep-cross-attention`](https://github.com/lucidrains/deep-cross-attention), MIT-licensed (Copyright © 2025 Phil Wang); the enwik8 archive is fetched from the same repository. The AttnRes implementation is my own. Architecture figure from Kimi Team 2026.
 
+## License
+
+[MIT](LICENSE). The license file carries both copyright notices: mine for the AttnRes implementation and the analysis, and Phil Wang's for the parts adapted from `deep-cross-attention`. The architecture figure and the papers in `related_works/` belong to their authors and are not covered by this license.
+
 ## References
 
 - Kimi Team (2026). *Attention Residuals* (Technical Report). https://github.com/MoonshotAI/Attention-Residuals
